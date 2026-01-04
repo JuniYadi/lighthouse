@@ -1,0 +1,9 @@
+# Lighthouse test results
+results/
+
+# Node modules (if lighthouse is installed locally)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
