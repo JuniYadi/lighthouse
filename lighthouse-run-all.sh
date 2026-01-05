@@ -457,28 +457,93 @@ aggregate_metrics() {
 ################################################################################
 
 generate_overall_table() {
-    local perf=$1
-    local fcp=$2
-    local lcp=$3
-    local tbt=$4
-    local si=$5
-    local cls=$6
-    local tti=$7
+    # Build header
+    local header="| Metric |"
+    local separator="|--------|"
+    
+    for profile in "${PROFILES[@]}"; do
+        header="$header $profile |"
+        separator="$separator---------|"
+    done
 
-    cat << EOF
-## Overall Averages
+    echo "## Overall Averages by Profile"
+    echo ""
+    echo "$header"
+    echo "$separator"
 
-| Metric | Value |
-|--------|-------|
-| Performance Score | $(printf "%.1f" "$perf") |
-| First Contentful Paint (FCP) | $(format_unit "$fcp") |
-| Largest Contentful Paint (LCP) | $(format_unit "$lcp") |
-| Total Blocking Time (TBT) | $(format_unit "$tbt") |
-| Speed Index (SI) | $(format_unit "$si") |
-| Cumulative Layout Shift (CLS) | $(printf "%.3f" "$cls") |
-| Time to Interactive (TTI) | $(format_unit "$tti") |
+    # Performance Score
+    local row="| Performance Score |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_perf[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(printf "%.1f" "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
 
-EOF
+    # FCP
+    row="| First Contentful Paint (FCP) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_fcp[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(format_unit "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
+    # LCP
+    row="| Largest Contentful Paint (LCP) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_lcp[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(format_unit "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
+    # TBT
+    row="| Total Blocking Time (TBT) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_tbt[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(format_unit "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
+    # SI
+    row="| Speed Index (SI) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_si[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(format_unit "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
+    # CLS
+    row="| Cumulative Layout Shift (CLS) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_cls[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(printf "%.3f" "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
+    echo ""
 }
 
 generate_profile_table() {
@@ -695,7 +760,7 @@ main() {
     echo ""
 
     # Generate overall summary table
-    generate_overall_table "$overall_perf" "$overall_fcp" "$overall_lcp" "$overall_tbt" "$overall_si" "$overall_cls" "$overall_tti"
+    generate_overall_table
 
     # Generate per-profile tables
     for profile in "${PROFILES[@]}"; do
