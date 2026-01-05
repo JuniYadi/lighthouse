@@ -69,12 +69,14 @@ Arguments:
 Options:
   --delay <seconds>      Delay between runs in seconds (default: ${DEFAULT_DELAY})
   --output-dir <path>    Output directory (default: ${DEFAULT_OUTPUT_DIR})
+  --report-only          Generate report from existing results without running new tests
   --help, -h             Show this help message
 
 Examples:
   $0 https://example.com
   $0 https://example.com --delay 10
   $0 https://example.com --delay 20 --output-dir ./my-results
+  $0 https://example.com --report-only
 
 EOF
 }
@@ -147,19 +149,85 @@ extract_hostname() {
 # Run Coordination
 ################################################################################
 
+load_existing_metrics() {
+    local url=$1
+    local output_dir=$2
+    local hostname=$(extract_hostname "$url")
+
+    # Data structures to store metrics
+    declare -A metrics
+    declare -A failure_count
+
+    log_info "Loading existing test results from: $output_dir" >&2
+    echo "" >&2
+
+    # Load metrics for each profile
+    for profile in "${PROFILES[@]}"; do
+        failure_count[$profile]=0
+        local run=1
+        local loaded_count=0
+
+        # Find all matching directories for this profile, sorted newest first
+        while IFS= read -r dir && [ $loaded_count -lt $RUNS_PER_PROFILE ]; do
+            local metrics_file="$dir/metrics.json"
+
+            if [ -f "$metrics_file" ]; then
+                # Extract metrics from the file
+                local perf=$(jq -r '.categories.performance' "$metrics_file")
+                local fcp=$(jq -r '.metrics.fcp' "$metrics_file")
+                local lcp=$(jq -r '.metrics.lcp' "$metrics_file")
+                local tbt=$(jq -r '.metrics.total_blocking_time' "$metrics_file")
+                local si=$(jq -r '.metrics.speed_index' "$metrics_file")
+                local cls=$(jq -r '.metrics.cls' "$metrics_file")
+                local tti=$(jq -r '.metrics.tti' "$metrics_file")
+
+                # Store metrics
+                metrics["${profile}_perf_${run}"]=$perf
+                metrics["${profile}_fcp_${run}"]=$fcp
+                metrics["${profile}_lcp_${run}"]=$lcp
+                metrics["${profile}_tbt_${run}"]=$tbt
+                metrics["${profile}_si_${run}"]=$si
+                metrics["${profile}_cls_${run}"]=$cls
+                metrics["${profile}_tti_${run}"]=$tti
+
+                log_info "Loaded $profile run $run from $(basename "$dir")" >&2
+
+                run=$((run + 1))
+                loaded_count=$((loaded_count + 1))
+            fi
+        done < <(find "$output_dir" -maxdepth 1 -type d -name "${hostname}*_${profile}_*" 2>/dev/null | sort -r)
+
+        # Track failures
+        local missing=$((RUNS_PER_PROFILE - loaded_count))
+        if [ $missing -gt 0 ]; then
+            failure_count[$profile]=$missing
+            log_warn "Only found $loaded_count out of $RUNS_PER_PROFILE runs for profile: $profile" >&2
+        fi
+    done
+
+    echo "" >&2
+
+    # Return metrics and failure counts
+    declare -p metrics
+    declare -p failure_count
+}
+
 find_latest_metrics() {
     local output_dir=$1
     local hostname=$2
     local profile=$3
 
-    # Find the newest directory matching the pattern for this profile
+    # Find all directories matching the pattern for this profile
     local search_pattern="${output_dir}/${hostname}*_${profile}_*"
-    local latest_dir=$(find "$output_dir" -maxdepth 1 -type d -name "$(basename "$search_pattern")" 2>/dev/null | sort -r | head -n 1)
 
-    if [ -n "$latest_dir" ] && [ -f "$latest_dir/metrics.json" ]; then
-        echo "$latest_dir/metrics.json"
-        return 0
-    fi
+    # Iterate through directories sorted by timestamp (newest first)
+    # and return the first one that has metrics.json
+    while IFS= read -r dir; do
+        if [ -f "$dir/metrics.json" ]; then
+            echo "$dir/metrics.json"
+            return 0
+        fi
+    done < <(find "$output_dir" -maxdepth 1 -type d -name "$(basename "$search_pattern")" 2>/dev/null | sort -r)
 
     return 1
 }
@@ -535,6 +603,7 @@ main() {
     local url=""
     local delay="$DEFAULT_DELAY"
     local output_dir="$DEFAULT_OUTPUT_DIR"
+    local report_only=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -546,6 +615,10 @@ main() {
             --output-dir)
                 output_dir="$2"
                 shift 2
+                ;;
+            --report-only)
+                report_only=true
+                shift
                 ;;
             --help|-h)
                 show_usage
@@ -582,22 +655,56 @@ main() {
     # Ensure output directory exists
     mkdir -p "$output_dir"
 
-    log_info "Starting Lighthouse test suite"
-    log_info "URL: $url"
-    log_info "Profiles: ${PROFILES[*]}"
-    log_info "Runs per profile: $RUNS_PER_PROFILE"
-    log_info "Delay between runs: ${delay}s"
-    log_info "Output directory: $output_dir"
+    # Run tests or load existing results based on mode
+    if [ "$report_only" = true ]; then
+        log_info "Report-only mode: Loading existing test results"
+        log_info "URL: $url"
+        log_info "Output directory: $output_dir"
+        echo ""
+
+        # Load existing metrics
+        local test_output=$(load_existing_metrics "$url" "$output_dir")
+
+        # Evaluate the returned associative arrays
+        eval "$test_output"
+    else
+        log_info "Starting Lighthouse test suite"
+        log_info "URL: $url"
+        log_info "Profiles: ${PROFILES[*]}"
+        log_info "Runs per profile: $RUNS_PER_PROFILE"
+        log_info "Delay between runs: ${delay}s"
+        log_info "Output directory: $output_dir"
+        echo ""
+
+        # Run all tests and capture metrics
+        local test_output=$(run_all_tests "$url" "$delay" "$output_dir")
+
+        # Evaluate the returned associative arrays
+        eval "$test_output"
+    fi
+
+    # Aggregate metrics
+    local agg_output=$(aggregate_metrics)
+    eval "$agg_output"
+
+    # Generate and display summary report
+    echo ""
+    echo "================================================================================"
+    log_success "LIGHTHOUSE TEST SUMMARY"
+    echo "================================================================================"
     echo ""
 
-    # Run all tests and capture metrics
-    local test_output=$(run_all_tests "$url" "$delay" "$output_dir")
+    # Generate overall summary table
+    generate_overall_table "$overall_perf" "$overall_fcp" "$overall_lcp" "$overall_tbt" "$overall_si" "$overall_cls" "$overall_tti"
 
-    # Evaluate the returned associative arrays
-    eval "$test_output"
+    # Generate per-profile tables
+    for profile in "${PROFILES[@]}"; do
+        generate_profile_table "$profile"
+    done
 
-    # TODO: Aggregation, formatting, and output will be implemented next
-    log_warn "Aggregation and output not yet implemented"
+    echo "================================================================================"
+    log_success "Test suite completed successfully!"
+    echo "================================================================================"
 }
 
 main "$@"
