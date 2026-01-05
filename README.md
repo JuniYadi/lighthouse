@@ -189,10 +189,10 @@ For running individual tests with specific throttling profiles, use `lighthouse-
 
 ```bash
 # Default throttling (4g-slow)
-./lighthouse-throttle.sh https://sit.hugeshop.com/au
+./lighthouse-throttle.sh https://example.com
 
 # Specific throttling profile
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 3g
+./lighthouse-throttle.sh https://example.com --throttling 3g
 
 # Custom output directory
 ./lighthouse-throttle.sh https://example.com --throttling 4g-fast --output-dir ./my-results
@@ -208,10 +208,10 @@ For running individual tests with specific throttling profiles, use `lighthouse-
 
 ```bash
 # Compare all results for a domain
-./lighthouse-diff.sh hugeshop.com
+./lighthouse-diff.sh example.com
 
 # Filter by throttling profile
-./lighthouse-diff.sh hugeshop.com --throttling 4g-slow
+./lighthouse-diff.sh example.com --throttling 4g-slow
 
 # Use custom results directory
 ./lighthouse-diff.sh example.com --results-dir ./my-results
@@ -242,33 +242,33 @@ For running individual tests with specific throttling profiles, use `lighthouse-
 
 ```bash
 # 1. Run baseline tests (3 runs for consistency)
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
 
 # 2. Check baseline average
-./lighthouse-diff.sh hugeshop.com --throttling 4g-slow
+./lighthouse-diff.sh example.com --throttling 4g-slow
 
 # 3. Make your optimizations...
 
 # 4. Run comparison tests
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
-./lighthouse-throttle.sh https://sit.hugeshop.com/au --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
+./lighthouse-throttle.sh https://example.com --throttling 4g-slow
 
 # 5. Compare with baseline
-./lighthouse-diff.sh hugeshop.com --throttling 4g-slow
+./lighthouse-diff.sh example.com --throttling 4g-slow
 ```
 
 ## Output Structure
 
 ```
 results/
-├── sit.hugeshop.com_au_4g-slow_2026-01-04_191640/
+├── example.com_4g-slow_2026-01-04_191640/
 │   ├── report.html      # Visual Lighthouse report
 │   ├── report.json      # Raw Lighthouse JSON
 │   └── metrics.json     # Extracted key metrics
-└── sit.hugeshop.com_au_4g-slow_2026-01-04_192015/
+└── example.com_4g-slow_2026-01-04_192015/
     ├── report.html
     ├── report.json
     └── metrics.json
@@ -286,7 +286,7 @@ results/
 ## Comparison Output Example
 
 ```
-Found 3 result(s) for hugeshop.com with 4g-slow throttling:
+Found 3 result(s) for example.com with 4g-slow throttling:
   - 2026-01-04T19:16:40
   - 2026-01-04T19:20:15
   - 2026-01-04T19:25:30
