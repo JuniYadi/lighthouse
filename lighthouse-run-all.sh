@@ -543,6 +543,18 @@ generate_overall_table() {
     done
     echo "$row"
 
+    # TTI
+    row="| Time to Interactive (TTI) |"
+    for profile in "${PROFILES[@]}"; do
+        local val="${profile_avg_tti[$profile]}"
+        if [ -n "$val" ]; then
+            row="$row $(format_unit "$val") |"
+        else
+            row="$row N/A |"
+        fi
+    done
+    echo "$row"
+
     echo ""
 }
 
