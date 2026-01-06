@@ -124,28 +124,29 @@
       </div>
 
       <div class="action-area">
-        <button id="run-btn" class="big-go-btn" type="button" disabled>
-          <span class="btn-text-large">GO</span>
+        <button id="action-btn" class="circle-action-btn" type="button" disabled>
+          <div class="btn-content start-state">
+            <span class="btn-label">GO</span>
+          </div>
+          
+          <div class="btn-content running-state hidden">
+            <svg class="progress-ring" viewBox="0 0 100 100">
+              <circle class="progress-ring-circle-bg" cx="50" cy="50" r="45"></circle>
+              <circle class="progress-ring-circle" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="inner-status">
+              <span id="btn-progress-percent">0%</span>
+              <span class="cancel-label">STOP</span>
+            </div>
+          </div>
         </button>
       </div>
-    </div>
 
-    <!-- Progress Section -->
-    <div id="progress-section" class="progress-display hidden">
-      <div class="gauge-loader">
-        <div class="spinner-ring"></div>
-        <div class="progress-stats">
-          <span id="progress-percent">0%</span>
+      <!-- Status Text Below -->
+      <div id="status-display" class="status-display hidden">
           <span id="progress-stage" class="stage-text">Initializing...</span>
-        </div>
+          <p id="progress-message" class="detail-text"></p>
       </div>
-      <p id="progress-message" class="detail-text"></p>
-      
-      <div class="progress-bar-container">
-        <div id="progress-fill" style="width: 0%"></div>
-      </div>
-
-      <button id="cancel-btn" class="btn-danger-outline hidden" type="button">Cancel Test</button>
     </div>
 
     <!-- Results Section -->

@@ -10,15 +10,19 @@ const saveServerBtn = document.getElementById("save-server-btn");
 const cancelServerBtn = document.getElementById("cancel-server-btn");
 const urlInput = document.getElementById("url-input");
 const profileSelect = document.getElementById("profile-select");
-const runBtn = document.getElementById("run-btn");
+const actionBtn = document.getElementById("action-btn"); // Renamed from run-btn
 const connectionStatus = document.getElementById("connection-status");
-const progressSection = document.getElementById("progress-section");
+const statusDisplay = document.getElementById("status-display"); // Renamed from progress-section
 const progressStage = document.getElementById("progress-stage");
-const progressPercent = document.getElementById("progress-percent");
-const progressFill = document.getElementById("progress-fill");
 const progressMessage = document.getElementById("progress-message");
-const cancelBtn = document.getElementById("cancel-btn");
+// const cancelBtn... removed, integrated into actionBtn
 const resultsSection = document.getElementById("results-section");
+
+// New Button Inner Elements
+const btnStartState = actionBtn.querySelector(".start-state");
+const btnRunningState = actionBtn.querySelector(".running-state");
+const btnProgressRing = actionBtn.querySelector(".progress-ring-circle");
+const btnProgressPercent = document.getElementById("btn-progress-percent");
 const metricsSummary = document.getElementById("metrics-summary");
 const reportSection = document.getElementById("report-section");
 const reportFrame = document.getElementById("report-frame");
@@ -164,7 +168,12 @@ function handleServerMessage(msg) {
 }
 
 function updateProgress(stage, percent, message) {
-  progressSection.classList.remove("hidden");
+  statusDisplay.classList.remove("hidden");
+
+  // Ensure button is in running state visually
+  if (stage !== "complete" && stage !== "cancelled") {
+      setButtonState("running");
+  }
 
   const stageLabels = {
     starting: "Initializing",
@@ -175,30 +184,42 @@ function updateProgress(stage, percent, message) {
   };
 
   progressStage.textContent = stageLabels[stage] || stage;
-  progressPercent.textContent = `${percent || 0}%`;
+  
+  const p = percent || 0;
+  if (btnProgressPercent) btnProgressPercent.textContent = `${p}%`;
 
-  if (percent !== undefined) {
-    progressFill.style.width = `${percent}%`;
-  }
+  // Update Ring
+  const circumference = 283;
+  const offset = circumference - (p / 100) * circumference;
+  if (btnProgressRing) btnProgressRing.style.strokeDashoffset = offset;
 
   // Strip ANSI color codes from log messages
   if (message) {
     const cleanMessage = message.replace(/\x1B\[\d+;?\d*m/g, "").replace(/\x1B\[0m/g, "");
     progressMessage.textContent = cleanMessage;
   }
+}
 
-  // Handle Spinner Animation
-  const spinner = document.querySelector(".spinner-ring");
-  if (stage === "complete") {
-    if (spinner) spinner.classList.add("stopped");
-    cancelBtn.classList.add("hidden");
+function setButtonState(state) {
+  if (state === "running") {
+    actionBtn.classList.add("running");
+    btnStartState.classList.add("hidden");
+    btnRunningState.classList.remove("hidden");
+    actionBtn.disabled = false; // Ensure clickable for cancel
+    
+    // Disable inputs
+    urlInput.disabled = true;
+    profileSelect.disabled = true;
   } else {
-    if (spinner) spinner.classList.remove("stopped");
-    if (stage === "running" || stage === "collecting") {
-      cancelBtn.classList.remove("hidden");
-    } else {
-      cancelBtn.classList.add("hidden");
-    }
+    actionBtn.classList.remove("running");
+    btnStartState.classList.remove("hidden");
+    btnRunningState.classList.add("hidden");
+    if (btnProgressRing) btnProgressRing.style.strokeDashoffset = 283; // Reset ring
+    
+    // Re-enable inputs
+    urlInput.disabled = false;
+    profileSelect.disabled = false;
+    checkFormValidity(); // Re-check if button should be enabled based on inputs
   }
 }
 
@@ -206,8 +227,9 @@ function showResults(reportUrl, metrics, reportJson, saveToHistory = true) {
   // Ensure progress is at 100% (defense in depth)
   updateProgress("complete", 100, "Test completed!");
   
-  // Hide progress section
-  progressSection.classList.add("hidden");
+  // Hide detailed progress status, but we might want to keep "Complete" message for a moment?
+  // For now let's hide the container after a short delay or just let the report take over.
+  // statusDisplay.classList.add("hidden");
 
   // Save to History
   if (saveToHistory) {
@@ -267,18 +289,14 @@ function showResults(reportUrl, metrics, reportJson, saveToHistory = true) {
     reportSummary.innerHTML = "";
   }
 
-  // Reset UI
-  runBtn.disabled = false;
-  runBtn.textContent = "Run Test";
-  cancelBtn.classList.add("hidden");
+  // Reset UI Button
+  setButtonState("idle");
 }
 
 function showError(message) {
   errorSection.classList.remove("hidden");
   errorText.textContent = message;
-  runBtn.disabled = false;
-  runBtn.textContent = "Run Test";
-  cancelBtn.classList.add("hidden");
+  setButtonState("idle");
 }
 
 // =============================================================================
@@ -564,9 +582,12 @@ function sendMessage(msg) {
 }
 
 function checkFormValidity() {
+  // Only update validity if we are NOT currently running a test
+  if (actionBtn.classList.contains("running")) return;
+
   const url = urlInput.value.trim();
   const hasConnection = ws?.readyState === WebSocket.OPEN;
-  runBtn.disabled = !url || !hasConnection;
+  actionBtn.disabled = !url || !hasConnection;
 }
 
 // Event Listeners
@@ -633,7 +654,17 @@ if (throttleInfoModal) {
 
 urlInput.addEventListener("input", checkFormValidity);
 
-runBtn.addEventListener("click", () => {
+actionBtn.addEventListener("click", () => {
+  // If running -> Cancel Action
+  if (actionBtn.classList.contains("running")) {
+    if (currentJobId) {
+      sendMessage({ type: "cancel", jobId: currentJobId });
+      updateProgress("cancelled", null, "Cancelling...");
+    }
+    return;
+  }
+
+  // If idle -> Start Action
   const url = urlInput.value.trim();
   const profile = profileSelect.value;
 
@@ -645,20 +676,13 @@ runBtn.addEventListener("click", () => {
   errorSection.classList.add("hidden");
   resultsSection.classList.add("hidden");
   reportSection.classList.add("hidden");
-  progressFill.style.width = "0%";
+  statusDisplay.classList.add("hidden");
 
-  // Disable button during test
-  runBtn.disabled = true;
-  runBtn.textContent = "Running...";
-
+  // Initiate running state
+  setButtonState("running");
+  
   // Send start message
   sendMessage({ type: "start", url, profile, jobId: currentJobId || undefined });
-});
-
-cancelBtn.addEventListener("click", () => {
-  if (currentJobId) {
-    sendMessage({ type: "cancel", jobId: currentJobId });
-  }
 });
 
 // Heartbeat to detect dead connections
@@ -790,18 +814,14 @@ if (newTestBtn) {
     resultsSection.classList.add("hidden");
     reportSection.classList.add("hidden");
     errorSection.classList.add("hidden");
-    progressSection.classList.add("hidden");
+    statusDisplay.classList.add("hidden");
     
     // Show Hero Section
     heroSection.classList.remove("hidden");
     
     // Reset Progress
-    progressFill.style.width = "0%";
-    progressPercent.textContent = "0%";
-    progressStage.textContent = "Ready";
-    
-    runBtn.disabled = false;
-    runBtn.textContent = "Run Test";
+    setButtonState("idle");
+    if (progressStage) progressStage.textContent = "Ready";
   });
 }
 
