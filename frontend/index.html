@@ -5,44 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lighthouse Runner</title>
   <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Lighthouse Runner</h1>
-      <p class="subtitle">Run performance tests via WebSocket</p>
-    </header>
-
-    <div class="config-section">
-      <!-- Server Selection -->
-      <div class="form-group">
-        <label for="server-select">Worker Server</label>
-        <select id="server-select">
-          <option value="">Loading servers...</option>
-        </select>
-        <button id="add-server-btn" class="btn-secondary" type="button">+ Add Custom</button>
-      </div>
-
-      <div id="custom-server-form" class="hidden">
-        <div class="form-group">
-          <label for="custom-server-url">Custom Server URL</label>
-          <input type="text" id="custom-server-url" placeholder="ws://192.168.1.100:8080">
-          <button id="save-server-btn" class="btn-secondary" type="button">Save</button>
-          <button id="cancel-server-btn" class="btn-text" type="button">Cancel</button>
+  <div class="app-background"></div>
+  
+  <div class="top-bar">
+    <div class="brand">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L2 22h20L12 2zm0 3.5L18.5 20H5.5L12 5.5z"/>
+      </svg>
+      <span>Lighthouse Runner</span>
+    </div>
+    
+    <div class="status-container">
+        <div class="connection-pill" id="connection-status">
+            <span class="status-dot"></span>
+            <span class="status-text">Disconnected</span>
         </div>
+
+        <!-- Server Config -->
+        <div class="server-config">
+            <div class="server-selector-group">
+                <select id="server-select" class="minimal-select">
+                    <option value="">Loading servers...</option>
+                </select>
+                <button id="add-server-btn" class="icon-btn" type="button" title="Add Custom Server">+</button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Hidden Custom Server Form (Modal-like) -->
+  <div id="custom-server-form" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>Add Custom Server</h3>
+      <div class="form-group">
+        <label for="custom-server-url">Server WebSocket URL</label>
+        <input type="text" id="custom-server-url" placeholder="ws://192.168.1.100:8080">
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-server-btn" class="btn-text" type="button">Cancel</button>
+        <button id="save-server-btn" class="btn-primary" type="button">Save</button>
       </div>
     </div>
+  </div>
 
-    <div class="form-section">
-      <!-- Test Configuration -->
-      <div class="form-row">
-        <div class="form-group">
-          <label for="url-input">URL to Test</label>
-          <input type="url" id="url-input" placeholder="https://example.com" required>
-        </div>
+  <main class="main-interface">
+    
+    <div class="hero-section">
+      <h1 class="hero-title">Measure Performance</h1>
+      
+      <div class="input-cluster">
+        <input type="url" id="url-input" placeholder="Enter URL (e.g. https://google.com)" required autocomplete="off">
+      </div>
 
-        <div class="form-group">
-          <label for="profile-select">Throttling Profile</label>
+      <div class="controls-cluster">
+        <div class="setting-pill">
+          <label for="profile-select">Throttling</label>
           <select id="profile-select">
             <option value="none">None (Baseline)</option>
             <option value="4g-fast">4G Fast</option>
@@ -52,64 +72,61 @@
         </div>
       </div>
 
-      <button id="run-btn" class="btn-primary" type="button" disabled>
-        Run Test
-      </button>
-    </div>
-
-    <!-- Connection Status -->
-    <div id="connection-status" class="status disconnected">
-      <span class="status-dot"></span>
-      <span class="status-text">Disconnected</span>
+      <div class="action-area">
+        <button id="run-btn" class="big-go-btn" type="button" disabled>
+          <span class="btn-text-large">GO</span>
+        </button>
+      </div>
     </div>
 
     <!-- Progress Section -->
-    <div id="progress-section" class="hidden">
-      <div class="progress-header">
-        <span id="progress-stage">Initializing...</span>
-        <span id="progress-percent">0%</span>
+    <div id="progress-section" class="progress-display hidden">
+      <div class="gauge-loader">
+        <div class="spinner-ring"></div>
+        <div class="progress-stats">
+          <span id="progress-percent">0%</span>
+          <span id="progress-stage" class="stage-text">Initializing...</span>
+        </div>
       </div>
-      <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      <p id="progress-message" class="detail-text"></p>
+      
+      <div class="progress-bar-hidden">
+        <div id="progress-fill" style="width: 0%"></div>
       </div>
-      <p id="progress-message" class="progress-message"></p>
-      <button id="cancel-btn" class="btn-danger hidden" type="button">Cancel</button>
+
+      <button id="cancel-btn" class="btn-danger-outline hidden" type="button">Cancel Test</button>
     </div>
 
     <!-- Results Section -->
-    <div id="results-section" class="hidden">
-      <h2>Lighthouse Scores</h2>
+    <div id="results-section" class="results-container hidden">
+      <div class="results-header">
+        <h2>Performance Score</h2>
+      </div>
       <div id="metrics-summary" class="metrics-grid"></div>
     </div>
 
-    <!-- Report Section - Custom Viewer -->
-    <div id="report-section" class="hidden">
-      <div class="report-header">
-        <h2>Lighthouse Report</h2>
-        <div class="report-actions">
-          <button id="view-toggle-btn" class="btn-secondary" type="button">View Details</button>
-          <a id="open-report-btn" class="btn-primary" href="#" target="_blank">Open Full Report</a>
-        </div>
+    <!-- Report Section -->
+    <div id="report-section" class="report-container hidden">
+      <div class="report-actions-bar">
+        <button id="view-toggle-btn" class="btn-secondary" type="button">Toggle Details</button>
+        <a id="open-report-btn" class="btn-primary" href="#" target="_blank">Open Full Report</a>
       </div>
 
-      <!-- Visual Summary Cards -->
       <div id="report-summary" class="report-summary"></div>
-
-      <!-- Audit Details -->
       <div id="audit-details" class="audit-details"></div>
-
-      <!-- Original iframe (hidden by default) -->
       <iframe id="report-frame" class="hidden" src="" title="Lighthouse Report"></iframe>
     </div>
 
     <!-- Error Section -->
-    <div id="error-section" class="hidden">
-      <div class="error-message">
-        <strong>Error:</strong> <span id="error-text"></span>
+    <div id="error-section" class="error-toast hidden">
+      <div class="error-content">
+        <span class="error-icon">⚠️</span>
+        <span id="error-text"></span>
       </div>
     </div>
-  </div>
 
+  </main>
+  
   <script type="module" src="/client.js"></script>
 </body>
 </html>
