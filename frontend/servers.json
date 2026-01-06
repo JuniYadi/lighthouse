@@ -1,5 +1,16 @@
 {
   "servers": [
-    { "name": "Local Worker", "url": "ws://localhost:8080" }
+    {
+      "name": "Sydney, Australia",
+      "url": "ws://localhost:8080"
+    },
+    {
+      "name": "New York, USA",
+      "url": "ws://localhost:8080"
+    },
+    {
+      "name": "London, UK",
+      "url": "ws://localhost:8080"
+    }
   ]
 }
