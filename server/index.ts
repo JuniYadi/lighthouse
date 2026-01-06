@@ -1,35 +1,27 @@
-import { WebSocketServer, WebSocket } from "ws";
 import { spawn } from "child_process";
-import { readFileSync } from "fs";
-import { extname, join } from "path";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PORT = process.env.PORT || 8080;
 const RESULTS_DIR = join(__dirname, "..", "results");
+const FRONTEND_DIR = join(__dirname, "..", "frontend");
 
-// Throttling profiles
-const PROFILES: Record<string, { rtt: number; throughput: number; cpu: number }> = {
-  "none": { rtt: 0, throughput: 10000, cpu: 1 },
-  "4g-fast": { rtt: 40, throughput: 10000, cpu: 1 },
-  "4g-slow": { rtt: 100, throughput: 1500, cpu: 4 },
-  "3g": { rtt: 300, throughput: 400, cpu: 4 },
-};
+// Throttling profiles (for reference, actual throttling done by lighthouse CLI)
+const PROFILES = ["none", "4g-fast", "4g-slow", "3g"];
 
-// Track active jobs
-const activeJobs = new Map<string, { process: any; ws: WebSocket }>();
+// Track active jobs by connection ID
+const activeJobs = new Map<string, { proc: any; ws: WebSocket }>();
 
 // Send message to WebSocket
 function send(ws: WebSocket, message: object) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
-  }
+  ws.send(JSON.stringify(message));
 }
 
 // Start lighthouse test
 function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
-  const profileConfig = PROFILES[profile];
-  if (!profileConfig) {
+  if (!PROFILES.includes(profile)) {
     send(ws, { type: "error", message: `Unknown profile: ${profile}` });
     return;
   }
@@ -57,9 +49,9 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  activeJobs.set(jobId, { process: proc, ws });
+  activeJobs.set(jobId, { proc, ws });
 
-  let reportUrl = "";
+  let reportPath = "";
 
   // Capture stdout
   proc.stdout.on("data", (data: Buffer) => {
@@ -69,7 +61,8 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
       if (line.includes("Analyzing") || line.includes("audit")) {
         send(ws, { type: "progress", stage: "running", message: line, percent: 50 });
       } else if (line.includes("report")) {
-        reportUrl = line.split(" ")[1] || "";
+        const parts = line.split(" ");
+        reportPath = parts[parts.length - 1] || "";
         send(ws, { type: "progress", stage: "collecting", percent: 80, message: "Collecting results..." });
       } else {
         send(ws, { type: "progress", stage: "running", message: line, percent: 60 });
@@ -91,17 +84,18 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
 
     if (code === 0) {
       // Construct report URL for iframe
-      const reportPath = `${hostname}_${profile}_${timestamp}/report.html`;
-      const fullReportUrl = `/results/${reportPath}`;
+      const fullReportUrl = reportPath ? reportPath : `/results/${hostname}_${profile}_${timestamp}/report.html`;
 
       // Read metrics if available
-      let metrics: any = {};
-      try {
-        const metricsPath = join(RESULTS_DIR, `${hostname}_${profile}_${timestamp}`, "metrics.json");
-        const metricsData = readFileSync(metricsPath, "utf-8");
-        metrics = JSON.parse(metricsData);
-      } catch (e) {
-        // Metrics file not found, use empty object
+      let metrics: Record<string, unknown> = {};
+      const metricsPath = join(RESULTS_DIR, `${hostname}_${profile}_${timestamp}`, "metrics.json");
+      if (existsSync(metricsPath)) {
+        try {
+          const metricsData = readFileSync(metricsPath, "utf-8");
+          metrics = JSON.parse(metricsData);
+        } catch {
+          // Metrics file not found or invalid
+        }
       }
 
       send(ws, {
@@ -121,55 +115,29 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
   });
 }
 
-// Create HTTP server with static file serving
-const server = Bun.serve({
-  port: PORT,
-  fetch(req: Request) {
-    const url = new URL(req.url);
+// Get content type for static files
+function getContentType(filePath: string): string {
+  const ext = filePath.split(".").pop()?.toLowerCase();
+  const types: Record<string, string> = {
+    html: "text/html",
+    css: "text/css",
+    js: "application/javascript",
+    json: "application/json",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    svg: "image/svg+xml",
+  };
+  return types[ext || ""] || "application/octet-stream";
+}
 
-    // Serve static files from results directory
-    if (url.pathname.startsWith("/results/")) {
-      const filePath = join(RESULTS_DIR, url.pathname.slice(9));
-      return serveStaticFile(filePath);
-    }
-
-    // Serve frontend files
-    if (url.pathname === "/" || url.pathname === "/index.html") {
-      return new Response(Bun.file(join(__dirname, "..", "frontend", "index.html")));
-    }
-
-    if (url.pathname === "/client.js") {
-      return new Response(Bun.file(join(__dirname, "..", "frontend", "client.ts")));
-    }
-
-    if (url.pathname === "/styles.css") {
-      return new Response(Bun.file(join(__dirname, "..", "frontend", "styles.css")));
-    }
-
-    if (url.pathname === "/servers.json") {
-      return new Response(Bun.file(join(__dirname, "..", "frontend", "servers.json")));
-    }
-
-    return new Response("Not Found", { status: 404 });
-  },
-});
-
-// Serve static file helper
+// Serve static file with TypeScript transpilation
 async function serveStaticFile(filePath: string): Promise<Response> {
   try {
-    const ext = extname(filePath);
-    const contentType: Record<string, string> = {
-      ".html": "text/html",
-      ".css": "text/css",
-      ".js": "application/javascript",
-      ".json": "application/json",
-      ".png": "image/png",
-      ".jpg": "image/jpeg",
-      ".svg": "image/svg+xml",
-    };
+    const ext = filePath.split(".").pop()?.toLowerCase();
 
-    // Transpile TypeScript files to JavaScript
-    if (ext === ".ts") {
+    // Transpile TypeScript files
+    if (ext === "ts") {
       const file = Bun.file(filePath);
       const source = await file.text();
       const { code } = await Bun.transpile(source, { loader: "ts" });
@@ -180,58 +148,108 @@ async function serveStaticFile(filePath: string): Promise<Response> {
 
     const file = Bun.file(filePath);
     return new Response(file, {
-      headers: { "Content-Type": contentType[ext] || "application/octet-stream" },
+      headers: { "Content-Type": getContentType(filePath) },
     });
   } catch {
     return new Response("Not Found", { status: 404 });
   }
 }
 
-// Create WebSocket server
-const wss = new WebSocketServer({ server });
+// Create server with HTTP and WebSocket
+const server = Bun.serve({
+  port: PORT,
 
-wss.on("connection", (ws: WebSocket) => {
-  const jobId = crypto.randomUUID();
+  fetch(req: Request): Response {
+    const url = new URL(req.url);
 
-  send(ws, { type: "connected", jobId });
-
-  ws.on("message", (data: Buffer) => {
-    try {
-      const msg = JSON.parse(data.toString());
-
-      switch (msg.type) {
-        case "start":
-          startTest(ws, msg.url, msg.profile, msg.jobId || jobId);
-          break;
-
-        case "cancel":
-          const job = activeJobs.get(msg.jobId);
-          if (job) {
-            job.process.kill();
-            activeJobs.delete(msg.jobId);
-            send(ws, { type: "progress", stage: "cancelled", message: "Test cancelled" });
-          }
-          break;
-
-        case "ping":
-          send(ws, { type: "pong" });
-          break;
+    // WebSocket upgrade
+    if (url.pathname === "/ws") {
+      const upgrade = req.headers.get("upgrade") === "websocket";
+      if (!upgrade) {
+        return new Response("Expected WebSocket upgrade", { status: 426 });
       }
-    } catch (e) {
-      send(ws, { type: "error", message: "Invalid message format" });
-    }
-  });
 
-  ws.on("close", () => {
-    // Cleanup: kill any running jobs for this connection
-    for (const [id, job] of activeJobs.entries()) {
-      if (job.ws === ws) {
-        job.process.kill();
-        activeJobs.delete(id);
-      }
+      const success = server.upgrade(req, {
+        data: { jobId: crypto.randomUUID() },
+      });
+
+      return success
+        ? new Response(null, { status: 101 })
+        : new Response("Upgrade failed", { status: 500 });
     }
-  });
+
+    // Serve static files from results directory
+    if (url.pathname.startsWith("/results/")) {
+      const filePath = join(RESULTS_DIR, url.pathname.slice(9));
+      return serveStaticFile(filePath);
+    }
+
+    // Serve frontend files
+    if (url.pathname === "/" || url.pathname === "/index.html") {
+      return new Response(Bun.file(join(FRONTEND_DIR, "index.html")));
+    }
+
+    if (url.pathname === "/client.js") {
+      return serveStaticFile(join(FRONTEND_DIR, "client.ts"));
+    }
+
+    if (url.pathname === "/styles.css") {
+      return new Response(Bun.file(join(FRONTEND_DIR, "styles.css")));
+    }
+
+    if (url.pathname === "/servers.json") {
+      return new Response(Bun.file(join(FRONTEND_DIR, "servers.json")));
+    }
+
+    return new Response("Not Found", { status: 404 });
+  },
+
+  websocket: {
+    open(ws: WebSocket) {
+      const jobId = ws.data.jobId as string;
+      ws.send(JSON.stringify({ type: "connected", jobId }));
+    },
+
+    message(ws: WebSocket, message: string) {
+      const jobId = ws.data.jobId as string;
+
+      try {
+        const msg = JSON.parse(message);
+
+        switch (msg.type) {
+          case "start":
+            startTest(ws, msg.url, msg.profile, msg.jobId || jobId);
+            break;
+
+          case "cancel":
+            const job = activeJobs.get(msg.jobId);
+            if (job) {
+              job.proc.kill();
+              activeJobs.delete(msg.jobId);
+              ws.send(JSON.stringify({ type: "progress", stage: "cancelled", message: "Test cancelled" }));
+            }
+            break;
+
+          case "ping":
+            ws.send(JSON.stringify({ type: "pong" }));
+            break;
+        }
+      } catch {
+        ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
+      }
+    },
+
+    close(ws: WebSocket) {
+      // Cleanup: kill any running jobs for this connection
+      for (const [id, job] of activeJobs.entries()) {
+        if (job.ws === ws) {
+          job.proc.kill();
+          activeJobs.delete(id);
+        }
+      }
+    },
+  },
 });
 
 console.log(`Lighthouse Worker Server running on http://localhost:${PORT}`);
-console.log(`WebSocket server running on ws://localhost:${PORT}`);
+console.log(`WebSocket server running on ws://localhost:${PORT}/ws`);

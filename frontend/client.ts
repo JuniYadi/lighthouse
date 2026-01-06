@@ -101,7 +101,9 @@ function connectToServer(url: string): void {
     ws.close();
   }
 
-  ws = new WebSocket(url);
+  // Append /ws path for Bun WebSocket server
+  const wsUrl = url.replace(/\/$/, "") + "/ws";
+  ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
     updateConnectionStatus(true);
