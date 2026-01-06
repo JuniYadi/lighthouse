@@ -51,8 +51,6 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
 
   activeJobs.set(jobId, { proc, ws });
 
-  let reportPath = "";
-
   // Capture stdout
   proc.stdout.on("data", (data: Buffer) => {
     const line = data.toString().trim();
@@ -61,8 +59,6 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
       if (line.includes("Analyzing") || line.includes("audit")) {
         send(ws, { type: "progress", stage: "running", message: line, percent: 50 });
       } else if (line.includes("report")) {
-        const parts = line.split(" ");
-        reportPath = parts[parts.length - 1] || "";
         send(ws, { type: "progress", stage: "collecting", percent: 80, message: "Collecting results..." });
       } else {
         send(ws, { type: "progress", stage: "running", message: line, percent: 60 });
@@ -83,8 +79,8 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
     activeJobs.delete(jobId);
 
     if (code === 0) {
-      // Construct report URL for iframe
-      const fullReportUrl = reportPath ? reportPath : `/results/${hostname}_${profile}_${timestamp}/report.html`;
+      // Construct web-accessible report URL (not filesystem path)
+      const reportWebPath = `/results/${hostname}_${profile}_${timestamp}/report.html`;
 
       // Read metrics if available
       let metrics: Record<string, unknown> = {};
@@ -98,11 +94,24 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
         }
       }
 
+      // Read full report JSON for visual renderer
+      let reportJson: Record<string, unknown> = {};
+      const reportJsonPath = join(RESULTS_DIR, `${hostname}_${profile}_${timestamp}`, "report.report.json");
+      if (existsSync(reportJsonPath)) {
+        try {
+          const jsonData = readFileSync(reportJsonPath, "utf-8");
+          reportJson = JSON.parse(jsonData);
+        } catch {
+          // Report JSON not found or invalid
+        }
+      }
+
       send(ws, {
         type: "result",
         jobId,
-        reportUrl: fullReportUrl,
+        reportUrl: reportWebPath,
         metrics,
+        reportJson, // Full Lighthouse JSON for visual rendering
       });
     } else {
       send(ws, { type: "error", message: `Test failed with exit code ${code}` });
@@ -190,7 +199,7 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/client.js") {
-      return serveStaticFile(join(FRONTEND_DIR, "client.ts"));
+      return serveStaticFile(join(FRONTEND_DIR, "client.js"));
     }
 
     if (url.pathname === "/styles.css") {
@@ -205,6 +214,10 @@ const server = Bun.serve({
   },
 
   websocket: {
+    // Keep connection alive - prevent disconnects from idle timeout
+    idleTimeout: 300, // 5 minutes max idle time
+    pingInterval: 30000, // Send ping every 30 seconds
+
     open(ws: WebSocket) {
       const jobId = ws.data.jobId as string;
       ws.send(JSON.stringify({ type: "connected", jobId }));
