@@ -248,26 +248,80 @@ select:focus {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.metric-card.score-good {
+  border-color: #0cce6b;
+  background: linear-gradient(135deg, #e8faf1 0%, #ffffff 100%);
+}
+
+.metric-card.score-good .metric-value {
+  color: #0cce6b;
+}
+
+.metric-card.score-average {
+  border-color: #ffa400;
+  background: linear-gradient(135deg, #fff8e8 0%, #ffffff 100%);
+}
+
+.metric-card.score-average .metric-value {
+  color: #ffa400;
+}
+
+.metric-card.score-poor {
+  border-color: #ff4e42;
+  background: linear-gradient(135deg, #fff0ef 0%, #ffffff 100%);
+}
+
+.metric-card.score-poor .metric-value {
+  color: #ff4e42;
 }
 
 .metric-label {
-  font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  color: #5f6368;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .metric-value {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
   color: #1a73e8;
 }
 

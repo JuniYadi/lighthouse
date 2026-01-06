@@ -23,7 +23,6 @@ const metricsSummary = document.getElementById("metrics-summary");
 const reportSection = document.getElementById("report-section");
 const reportFrame = document.getElementById("report-frame");
 const reportSummary = document.getElementById("report-summary");
-const categoryScores = document.getElementById("category-scores");
 const auditDetails = document.getElementById("audit-details");
 const openReportBtn = document.getElementById("open-report-btn");
 const viewToggleBtn = document.getElementById("view-toggle-btn");
@@ -164,7 +163,7 @@ function showResults(reportUrl, metrics, reportJson) {
   // Ensure progress is at 100% (defense in depth)
   updateProgress("complete", 100, "Test completed!");
 
-  // Show metrics summary
+  // Show metrics summary - ONLY category scores in the top Results section
   resultsSection.classList.remove("hidden");
 
   const categoryLabels = {
@@ -174,43 +173,21 @@ function showResults(reportUrl, metrics, reportJson) {
     seo: "SEO",
   };
 
-  const metricLabels = {
-    fcp: { label: "First Contentful Paint", unit: "ms" },
-    lcp: { label: "Largest Contentful Paint", unit: "ms" },
-    tti: { label: "Time to Interactive", unit: "ms" },
-    speed_index: { label: "Speed Index", unit: "ms" },
-    cls: { label: "Cumulative Layout Shift", unit: "" },
-    total_blocking_time: { label: "Total Blocking Time", unit: "ms" },
-  };
-
   let metricsHtml = "";
 
-  // Category scores
+  // Show ONLY category scores (Performance, Accessibility, Best Practices, SEO)
   if (metrics.categories) {
     for (const [key, value] of Object.entries(metrics.categories)) {
       const label = categoryLabels[key] || key;
+      const score = value;
+      const scoreClass = score >= 90 ? "score-good" : score >= 50 ? "score-average" : "score-poor";
+
       metricsHtml += `
-        <div class="metric-card">
+        <div class="metric-card ${scoreClass}">
           <div class="metric-label">${label}</div>
-          <div class="metric-value">${value}</div>
+          <div class="metric-value">${score}</div>
         </div>
       `;
-    }
-  }
-
-  // Core metrics
-  if (metrics.metrics) {
-    for (const [key, value] of Object.entries(metrics.metrics)) {
-      const config = metricLabels[key];
-      if (config && value !== undefined) {
-        const displayValue = key === "cls" ? value.toFixed(3) : Math.round(value);
-        metricsHtml += `
-          <div class="metric-card">
-            <div class="metric-label">${config.label}</div>
-            <div class="metric-value">${displayValue}<span class="metric-unit"> ${config.unit}</span></div>
-          </div>
-        `;
-      }
     }
   }
 
@@ -226,7 +203,6 @@ function showResults(reportUrl, metrics, reportJson) {
   } else {
     // Fallback when no JSON data available
     auditDetails.innerHTML = "<p class='no-data'>Click 'Open Full Report' to view the complete report.</p>";
-    categoryScores.innerHTML = "";
     reportSummary.innerHTML = "";
   }
 
@@ -263,64 +239,15 @@ function renderReport(reportUrl, fullJson) {
   // If no JSON data, just show the iframe link
   if (!fullJson || !fullJson.audits) {
     auditDetails.innerHTML = "<p class='no-data'>No audit details available. Click 'Open Full Report' to view the complete report.</p>";
-    categoryScores.innerHTML = "";
     reportSummary.innerHTML = "";
     return;
   }
 
-  // Render category scores
-  renderCategoryScores(fullJson.categories);
-
   // Render audit details
   renderAuditDetails(fullJson.audits);
 
-  // Render summary
+  // Render summary (Core Web Vitals)
   renderSummary(fullJson);
-}
-
-function renderCategoryScores(categories) {
-  if (!categories) {
-    categoryScores.innerHTML = "";
-    return;
-  }
-
-  const categoryConfig = {
-    performance: { label: "Performance", icon: "⚡", color: "#f4914e" },
-    accessibility: { label: "Accessibility", icon: "♿", color: "#0077cc" },
-    "best-practices": { label: "Best Practices", icon: "✨", color: "#5acf7d" },
-    seo: { label: "SEO", icon: "🔍", color: "#f6c844" },
-  };
-
-  let html = '<div class="score-cards">';
-
-  for (const [key, category] of Object.entries(categories)) {
-    const config = categoryConfig[key] || { label: key, icon: "📊", color: "#666" };
-    const score = category.score !== undefined ? Math.round(category.score * 100) : 0;
-    const color = score >= 90 ? "#5acf7d" : score >= 50 ? "#f6c844" : "#f4914e";
-
-    html += `
-      <div class="score-card" style="--accent-color: ${config.color}">
-        <div class="score-icon">${config.icon}</div>
-        <div class="score-info">
-          <div class="score-label">${config.label}</div>
-          <div class="score-value" style="color: ${color}">${score}</div>
-        </div>
-        <div class="score-ring">
-          <svg viewBox="0 0 36 36">
-            <path class="score-ring-bg"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-            <path class="score-ring-fill"
-              stroke="${color}"
-              stroke-dasharray="${score}, 100"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          </svg>
-        </div>
-      </div>
-    `;
-  }
-
-  html += '</div>';
-  categoryScores.innerHTML = html;
 }
 
 function renderAuditDetails(audits) {
