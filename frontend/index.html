@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lighthouse Runner</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Lighthouse Runner</h1>
+      <p class="subtitle">Run performance tests via WebSocket</p>
+    </header>
+
+    <div class="config-section">
+      <!-- Server Selection -->
+      <div class="form-group">
+        <label for="server-select">Worker Server</label>
+        <select id="server-select">
+          <option value="">Loading servers...</option>
+        </select>
+        <button id="add-server-btn" class="btn-secondary" type="button">+ Add Custom</button>
+      </div>
+
+      <div id="custom-server-form" class="hidden">
+        <div class="form-group">
+          <label for="custom-server-url">Custom Server URL</label>
+          <input type="text" id="custom-server-url" placeholder="ws://192.168.1.100:8080">
+          <button id="save-server-btn" class="btn-secondary" type="button">Save</button>
+          <button id="cancel-server-btn" class="btn-text" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <!-- Test Configuration -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="url-input">URL to Test</label>
+          <input type="url" id="url-input" placeholder="https://example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-select">Throttling Profile</label>
+          <select id="profile-select">
+            <option value="none">None (Baseline)</option>
+            <option value="4g-fast">4G Fast</option>
+            <option value="4g-slow" selected>4G Slow</option>
+            <option value="3g">3G</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="run-btn" class="btn-primary" type="button" disabled>
+        Run Test
+      </button>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connection-status" class="status disconnected">
+      <span class="status-dot"></span>
+      <span class="status-text">Disconnected</span>
+    </div>
+
+    <!-- Progress Section -->
+    <div id="progress-section" class="hidden">
+      <div class="progress-header">
+        <span id="progress-stage">Initializing...</span>
+        <span id="progress-percent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <p id="progress-message" class="progress-message"></p>
+      <button id="cancel-btn" class="btn-danger hidden" type="button">Cancel</button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results-section" class="hidden">
+      <h2>Results</h2>
+      <div id="metrics-summary" class="metrics-grid"></div>
+    </div>
+
+    <!-- Report iframe -->
+    <div id="report-section" class="hidden">
+      <h2>Lighthouse Report</h2>
+      <iframe id="report-frame" src="" title="Lighthouse Report"></iframe>
+    </div>
+
+    <!-- Error Section -->
+    <div id="error-section" class="hidden">
+      <div class="error-message">
+        <strong>Error:</strong> <span id="error-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/client.js"></script>
+</body>
+</html>
