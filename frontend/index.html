@@ -82,10 +82,27 @@
       <div id="metrics-summary" class="metrics-grid"></div>
     </div>
 
-    <!-- Report iframe -->
+    <!-- Report Section - Custom Viewer -->
     <div id="report-section" class="hidden">
-      <h2>Lighthouse Report</h2>
-      <iframe id="report-frame" src="" title="Lighthouse Report"></iframe>
+      <div class="report-header">
+        <h2>Lighthouse Report</h2>
+        <div class="report-actions">
+          <button id="view-toggle-btn" class="btn-secondary" type="button">View Details</button>
+          <a id="open-report-btn" class="btn-primary" href="#" target="_blank">Open Full Report</a>
+        </div>
+      </div>
+
+      <!-- Visual Summary Cards -->
+      <div id="report-summary" class="report-summary"></div>
+
+      <!-- Category Scores -->
+      <div id="category-scores" class="category-scores"></div>
+
+      <!-- Audit Details -->
+      <div id="audit-details" class="audit-details"></div>
+
+      <!-- Original iframe (hidden by default) -->
+      <iframe id="report-frame" class="hidden" src="" title="Lighthouse Report"></iframe>
     </div>
 
     <!-- Error Section -->
