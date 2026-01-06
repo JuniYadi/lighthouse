@@ -131,6 +131,12 @@ body {
     color: var(--text-main);
 }
 
+.minimal-select option,
+#profile-select option {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+}
+
 .icon-btn {
     background: rgba(255, 255, 255, 0.1);
     border: none;
@@ -467,37 +473,74 @@ body {
 
 #report-frame {
     width: 100%;
-    height: 800px;
+    height: 100vh;
+    min-height: 800px;
     border: none;
     background: white;
     border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
 }
 
 /* --- Report Summary Styles (Core Vitals) --- */
 .summary-metrics {
-    margin-bottom: 2rem; 
+    margin-bottom: 3rem; 
 }
 .summary-metrics h3 {
-    margin-bottom: 1rem;
-    color: var(--text-muted);
-    font-weight: 400;
+    margin-bottom: 1.5rem;
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 1.2rem;
+    border-left: 4px solid var(--primary);
+    padding-left: 1rem;
 }
+
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .vitals-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 500px) {
+    .vitals-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .summary-metric {
-    background: rgba(255,255,255,0.03);
-    padding: 1rem;
-    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    margin-bottom: 0.5rem;
+    text-align: center;
+    transition: transform 0.2s, background 0.2s;
+    border: 1px solid rgba(255,255,255,0.05);
 }
+
+.summary-metric:hover {
+    transform: translateY(-2px);
+    background: rgba(255,255,255,0.08);
+}
+
 .summary-metric-label {
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.8rem;
+    font-weight: 600;
 }
 .summary-metric-value {
-    font-weight: 700;
-    font-size: 1.1rem;
+    font-weight: 800;
+    font-size: 2rem;
+    color: var(--text-main);
 }
 
 
@@ -588,4 +631,117 @@ body {
     align-items: center;
     gap: 1rem;
     color: #ff8a93;
+}
+
+/* --- Audit Details Styling --- */
+.audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 2rem;
+}
+
+.audit-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.audit-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.audit-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    gap: 1.2rem;
+    user-select: none;
+}
+
+.audit-status {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.audit-pass .audit-status { color: var(--primary); background: rgba(0, 255, 189, 0.15); box-shadow: 0 0 10px rgba(0,255,189,0.1); }
+.audit-average .audit-status { color: #ffaa00; background: rgba(255, 170, 0, 0.15); }
+.audit-fail .audit-status { color: var(--danger); background: rgba(255, 71, 87, 0.15); box-shadow: 0 0 10px rgba(255,71,87,0.1); }
+
+.audit-title {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-main);
+    font-size: 1.05rem;
+}
+
+.audit-arrow {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.audit-arrow.rotated {
+    transform: rotate(90deg);
+    color: var(--primary);
+}
+
+.audit-content {
+    padding: 0 1.5rem 1.5rem 4.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.1);
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    animation: fadeIn 0.3s ease;
+}
+
+.audit-content.hidden {
+    display: none;
+}
+
+.audit-description {
+    margin-bottom: 0.5rem;
+}
+
+.audit-display-value {
+    font-weight: 700;
+    color: var(--text-main);
+    margin-top: 0.5rem;
+}
+
+.audit-table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.audit-table th {
+    text-align: left;
+    padding: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.audit-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }

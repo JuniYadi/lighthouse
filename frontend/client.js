@@ -381,7 +381,7 @@ function renderSummary(json) {
 
   let html = '<div class="summary-metrics">';
   html += '<h3>Core Web Vitals</h3>';
-  html += '<div class="metrics-grid">';
+  html += '<div class="vitals-grid">';
 
   for (const { key, label, format } of keyMetrics) {
     const audit = metrics[key];
