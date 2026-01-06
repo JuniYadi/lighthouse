@@ -49,17 +49,39 @@ let history = [];
 
 // Load server configuration
 async function loadServers() {
+  let loadedServers = [];
   try {
     const response = await fetch("/servers.json");
     if (response.ok) {
       const config = await response.json();
-      servers = config.servers;
-      populateServerDropdown();
+      loadedServers = config.servers;
     }
   } catch {
     console.warn("Could not load servers.json, using defaults");
-    servers = [{ name: "Local Worker", url: "ws://localhost:8080" }];
-    populateServerDropdown();
+    loadedServers = [{ name: "Local Worker", url: "ws://localhost:8080" }];
+  }
+
+  // Load custom servers from localStorage
+  const savedServers = localStorage.getItem("lighthouse-servers");
+  if (savedServers) {
+    try {
+      const parsed = JSON.parse(savedServers);
+      parsed.forEach(s => {
+        if (!loadedServers.find(existing => existing.url === s.url)) {
+          loadedServers.push(s);
+        }
+      });
+    } catch {
+      // Ignore invalid data
+    }
+  }
+
+  servers = loadedServers;
+  populateServerDropdown();
+  
+  // Initial connection
+  if (serverSelect.value) {
+    connectToServer(serverSelect.value);
   }
 }
 
@@ -648,18 +670,6 @@ setInterval(() => {
 
 // Initialize
 loadServers();
-
-// Load custom servers from localStorage
-const savedServers = localStorage.getItem("lighthouse-servers");
-if (savedServers) {
-  try {
-    const parsed = JSON.parse(savedServers);
-    servers = [...servers, ...parsed];
-    populateServerDropdown();
-  } catch {
-    // Ignore invalid data
-  }
-}
 
 // =============================================================================
 // History Management
