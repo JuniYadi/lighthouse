@@ -1,0 +1,17 @@
+services:
+  lighthouse-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lighthouse-runner
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist the generated reports to the host machine
+      - ./results:/app/results
+    environment:
+      # Ensure the server listens on all interfaces inside the container
+      - PORT=8080
+    # Lighthouse can use a lot of shared memory in Chrome
+    shm_size: '4gb'
+    restart: unless-stopped
