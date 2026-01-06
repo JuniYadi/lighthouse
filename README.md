@@ -283,6 +283,34 @@ results/
 | `4g-slow` | 100 | 1.5 Mbps | 4x | Typical 4G / Weak Signal |
 | `3g` | 300 | 400 Kbps | 4x | 3G / Poor Mobile |
 
+## Web Server & Interface
+
+The project includes a web server to run Lighthouse tests remotely and view results through a web interface.
+
+### Running the Server
+
+The server requires [Bun](https://bun.sh) to run.
+
+```bash
+cd server
+bun run index.ts
+```
+
+The server will start on `http://localhost:8080`.
+
+### Remote Servers Configuration
+
+You can configure multiple remote servers to be available in the frontend interface using the `SERVERS` environment variable. This allows you to switch between different Lighthouse workers from a single frontend.
+
+The format is `NAME=URL`, separated by semicolons (`;`).
+For WebSockets, use `ws://` (or `wss://` for secure connections).
+
+```bash
+# Example with multiple servers
+export SERVERS="Local=ws://localhost:8080/ws;Production Worker=wss://lighthouse.example.com/ws"
+bun run index.ts
+```
+
 ## Comparison Output Example
 
 ```
