@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, statSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
 
@@ -80,8 +80,8 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
 
     if (code === 0) {
       // Construct web-accessible report URL (not filesystem path)
-      // Lighthouse generates files with .report.html extension when using --output-path
-      const reportWebPath = `/results/${hostname}_${profile}_${timestamp}/report.report.html`;
+      // Point to directory (server will resolve index.html or report.report.html)
+      const reportWebPath = `/results/${hostname}_${profile}_${timestamp}/`;
 
       // Read metrics if available
       let metrics: Record<string, unknown> = {};
@@ -193,7 +193,16 @@ const server = Bun.serve({
 
     // Serve static files from results directory
     if (url.pathname.startsWith("/results/")) {
-      const filePath = join(RESULTS_DIR, url.pathname.slice(9));
+      let filePath = join(RESULTS_DIR, url.pathname.slice(9));
+      
+      try {
+        if (existsSync(filePath) && statSync(filePath).isDirectory()) {
+          filePath = join(filePath, "report.report.html");
+        }
+      } catch (e) {
+        // Ignore errors, let serveStaticFile handle 404
+      }
+
       return serveStaticFile(filePath);
     }
 
