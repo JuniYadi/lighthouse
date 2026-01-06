@@ -105,6 +105,12 @@ body {
     color: var(--danger);
 }
 
+.server-config {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .server-selector-group {
     display: flex;
     align-items: center;
@@ -141,8 +147,8 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border: none;
     color: var(--text-main);
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.2rem;
@@ -150,6 +156,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.icon-btn svg {
+  display: block;
 }
 
 .icon-btn:hover {

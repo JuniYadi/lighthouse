@@ -31,6 +31,13 @@ const errorText = document.getElementById("error-text");
 const throttleInfoBtn = document.getElementById("throttle-info-btn");
 const throttleInfoModal = document.getElementById("throttle-info-modal");
 const closeThrottleInfoBtn = document.getElementById("close-throttle-info-btn");
+const historyBtn = document.getElementById("history-btn");
+const historyModal = document.getElementById("history-modal");
+const closeHistoryBtn = document.getElementById("close-history-btn");
+const clearHistoryBtn = document.getElementById("clear-history-btn");
+const historyList = document.getElementById("history-list");
+const newTestBtn = document.getElementById("new-test-btn");
+const heroSection = document.querySelector(".hero-section");
 
 // State
 let ws = null;
@@ -38,6 +45,7 @@ let currentJobId = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 3;
 let servers = [];
+let history = [];
 
 // Load server configuration
 async function loadServers() {
@@ -175,6 +183,22 @@ function updateProgress(stage, percent, message) {
 function showResults(reportUrl, metrics, reportJson) {
   // Ensure progress is at 100% (defense in depth)
   updateProgress("complete", 100, "Test completed!");
+  
+  // Hide progress section
+  progressSection.classList.add("hidden");
+
+  // Save to History
+  saveHistoryItem({
+    timestamp: new Date().toISOString(),
+    url: urlInput.value,
+    profile: profileSelect.value,
+    reportUrl,
+    metrics,
+    reportJson
+  });
+  
+  // Hide input form on completion (UX improvement)
+  if (heroSection) heroSection.classList.add("hidden");
 
   // Show metrics summary - ONLY category scores in the top Results section
   resultsSection.classList.remove("hidden");
@@ -491,9 +515,21 @@ viewToggleBtn.addEventListener("click", () => {
   if (reportFrame.classList.contains("hidden")) {
     reportFrame.classList.remove("hidden");
     viewToggleBtn.textContent = "View Details";
+    
+    // Hide other sections for cleaner view
+    heroSection.classList.add("hidden");
+    resultsSection.classList.add("hidden");
+    auditDetails.classList.add("hidden");
+    reportSummary.classList.add("hidden");
   } else {
     reportFrame.classList.add("hidden");
     viewToggleBtn.textContent = "View Original Report";
+    
+    // Show sections back
+    heroSection.classList.remove("hidden");
+    resultsSection.classList.remove("hidden");
+    auditDetails.classList.remove("hidden");
+    reportSummary.classList.remove("hidden");
   }
 });
 
@@ -622,3 +658,140 @@ if (savedServers) {
     // Ignore invalid data
   }
 }
+
+// =============================================================================
+// History Management
+// =============================================================================
+
+function loadHistory() {
+  const saved = localStorage.getItem("lighthouse-history");
+  if (saved) {
+    try {
+      history = JSON.parse(saved);
+    } catch {
+      history = [];
+    }
+  }
+}
+
+function saveHistoryItem(item) {
+  history.unshift(item); // Add to beginning
+  if (history.length > 20) {
+    history.pop(); // Keep max 20 items
+  }
+  localStorage.setItem("lighthouse-history", JSON.stringify(history));
+}
+
+function renderHistoryList() {
+  if (history.length === 0) {
+    historyList.innerHTML = '<p class="text-muted">No history available.</p>';
+    return;
+  }
+
+  historyList.innerHTML = history.map((item, index) => {
+    // Calculate Score average or main score
+    const score = item.metrics?.categories?.performance 
+      ? Math.round(item.metrics.categories.performance) 
+      : 0;
+    const scoreClass = score >= 90 ? "score-good" : score >= 50 ? "score-average" : "score-poor";
+    const date = new Date(item.timestamp).toLocaleString();
+
+    return `
+      <div class="history-item" style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); transition: background 0.2s;">
+        <div style="display: flex; align-items: center; flex: 1; cursor: pointer;" onclick="restoreHistoryItem(${index})">
+          <div class="score-badge ${scoreClass}" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; background: #333; color: white; border: 2px solid currentColor;">
+            ${score}
+          </div>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 2px; color: var(--text-main);">${item.url}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${date} - ${item.profile}</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="${item.reportUrl}" target="_blank" title="Open Report" style="color: var(--text-muted); display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+            </a>
+            <button onclick="restoreHistoryItem(${index})" style="background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 500;">
+                Load &rarr;
+            </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Make global to be accessible via onclick
+window.restoreHistoryItem = function(index) {
+  const item = history[index];
+  if (!item) return;
+
+  historyModal.classList.add("hidden");
+  
+  // Restore State
+  urlInput.value = item.url;
+  profileSelect.value = item.profile;
+  
+  // Show Results (Re-use existing function)
+  showResults(item.reportUrl, item.metrics, item.reportJson);
+};
+
+// History Listeners
+if (historyBtn) {
+  historyBtn.addEventListener("click", () => {
+    renderHistoryList();
+    historyModal.classList.remove("hidden");
+  });
+}
+
+if (closeHistoryBtn) {
+  closeHistoryBtn.addEventListener("click", () => {
+    historyModal.classList.add("hidden");
+  });
+}
+
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear all history?")) {
+      history = [];
+      localStorage.removeItem("lighthouse-history");
+      renderHistoryList();
+    }
+  });
+}
+
+if (historyModal) {
+  historyModal.addEventListener("click", (e) => {
+    if (e.target === historyModal) {
+      historyModal.classList.add("hidden");
+    }
+  });
+}
+
+// New Test Button
+if (newTestBtn) {
+  newTestBtn.addEventListener("click", () => {
+    // Hide Results
+    resultsSection.classList.add("hidden");
+    reportSection.classList.add("hidden");
+    errorSection.classList.add("hidden");
+    progressSection.classList.add("hidden");
+    
+    // Show Hero Section
+    heroSection.classList.remove("hidden");
+    
+    // Reset Progress
+    progressFill.style.width = "0%";
+    progressPercent.textContent = "0%";
+    progressStage.textContent = "Ready";
+    
+    runBtn.disabled = false;
+    runBtn.textContent = "Run Test";
+  });
+}
+
+// Load History on Start
+loadHistory();

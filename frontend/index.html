@@ -32,6 +32,11 @@
 
         <!-- Server Config -->
         <div class="server-config">
+            <button id="history-btn" class="icon-btn" type="button" title="View History">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </button>
             <div class="server-selector-group">
                 <select id="server-select" class="minimal-select">
                     <option value="">Loading servers...</option>
@@ -53,6 +58,21 @@
       <div class="modal-actions">
         <button id="cancel-server-btn" class="btn-text" type="button">Cancel</button>
         <button id="save-server-btn" class="btn-primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3>Test History</h3>
+      <div id="history-list" style="overflow-y: auto; flex: 1; margin: 1rem 0;">
+        <!-- History items will be injected here -->
+        <p class="text-muted">No history available.</p>
+      </div>
+      <div class="modal-actions">
+        <button id="clear-history-btn" class="btn-danger-outline" type="button">Clear History</button>
+        <button id="close-history-btn" class="btn-primary" type="button">Close</button>
       </div>
     </div>
   </div>
@@ -139,6 +159,7 @@
     <!-- Report Section -->
     <div id="report-section" class="report-container hidden">
       <div class="report-actions-bar">
+        <button id="new-test-btn" class="btn-secondary" type="button">New Test</button>
         <button id="view-toggle-btn" class="btn-secondary" type="button">Toggle Details</button>
         <a id="open-report-btn" class="btn-primary" href="#" target="_blank">Open Full Report</a>
       </div>
