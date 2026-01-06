@@ -106,6 +106,9 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
         }
       }
 
+      // Send final progress update to show completion
+      send(ws, { type: "progress", stage: "complete", percent: 100, message: "Test completed!" });
+
       send(ws, {
         type: "result",
         jobId,
