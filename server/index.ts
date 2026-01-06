@@ -80,7 +80,8 @@ function startTest(ws: WebSocket, url: string, profile: string, jobId: string) {
 
     if (code === 0) {
       // Construct web-accessible report URL (not filesystem path)
-      const reportWebPath = `/results/${hostname}_${profile}_${timestamp}/report.html`;
+      // Lighthouse generates files with .report.html extension when using --output-path
+      const reportWebPath = `/results/${hostname}_${profile}_${timestamp}/report.report.html`;
 
       // Read metrics if available
       let metrics: Record<string, unknown> = {};
