@@ -151,14 +151,24 @@ function updateProgress(stage, percent, message) {
     progressFill.style.width = `${percent}%`;
   }
 
+  // Strip ANSI color codes from log messages
   if (message) {
-    progressMessage.textContent = message;
+    const cleanMessage = message.replace(/\x1B\[\d+;?\d*m/g, "").replace(/\x1B\[0m/g, "");
+    progressMessage.textContent = cleanMessage;
   }
 
-  if (stage === "running" || stage === "collecting") {
-    cancelBtn.classList.remove("hidden");
-  } else {
+  // Handle Spinner Animation
+  const spinner = document.querySelector(".spinner-ring");
+  if (stage === "complete") {
+    if (spinner) spinner.classList.add("stopped");
     cancelBtn.classList.add("hidden");
+  } else {
+    if (spinner) spinner.classList.remove("stopped");
+    if (stage === "running" || stage === "collecting") {
+      cancelBtn.classList.remove("hidden");
+    } else {
+      cancelBtn.classList.add("hidden");
+    }
   }
 }
 
@@ -297,7 +307,20 @@ function renderAuditDetails(audits) {
     ...otherAudits.filter(k => audits[k].score !== null),
   ];
 
-  let html = '<div class="audit-list">';
+  // 1. Add Filter Controls
+  let html = `
+    <div class="audit-controls">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="fail">Opportunities & Errors</button>
+        <button class="filter-btn" data-filter="average">Diagnostics</button>
+        <button class="filter-btn" data-filter="pass">Passed</button>
+      </div>
+      <button class="filter-btn" id="collapse-all-btn">Collapse All</button>
+    </div>
+  `;
+  
+  html += '<div class="audit-list">';
 
   for (const key of sortedKeys.slice(0, 50)) {
     const audit = audits[key];
@@ -311,8 +334,9 @@ function renderAuditDetails(audits) {
     // Get description (strip HTML)
     const description = audit.description?.replace(/<[^>]*>/g, "") || audit.title || key;
 
+    // Add data-status for filtering
     html += `
-      <div class="audit-item ${statusClass}" data-audit="${key}">
+      <div class="audit-item ${statusClass}" data-audit="${key}" data-status="${status}">
         <div class="audit-header">
           <span class="audit-status">${statusIcon}</span>
           <span class="audit-title">${audit.title || key}</span>
@@ -330,7 +354,7 @@ function renderAuditDetails(audits) {
   html += '</div>';
   auditDetails.innerHTML = html;
 
-  // Add click handlers
+  // Add click handlers for Accordion
   document.querySelectorAll(".audit-item").forEach(item => {
     item.querySelector(".audit-header").addEventListener("click", () => {
       const content = item.querySelector(".audit-content");
@@ -338,6 +362,32 @@ function renderAuditDetails(audits) {
       content.classList.toggle("hidden");
       arrow.classList.toggle("rotated");
     });
+  });
+
+  // Add Filter Logic
+  document.querySelectorAll(".filter-btn[data-filter]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      // Update active state
+      document.querySelectorAll(".filter-btn[data-filter]").forEach(b => b.classList.remove("active"));
+      e.target.classList.add("active");
+
+      const filter = e.target.dataset.filter;
+      const items = document.querySelectorAll(".audit-item");
+
+      items.forEach(item => {
+        if (filter === "all" || item.dataset.status === filter) {
+          item.classList.remove("hidden");
+        } else {
+          item.classList.add("hidden");
+        }
+      });
+    });
+  });
+
+  // Add Collapse All Logic
+  document.getElementById("collapse-all-btn").addEventListener("click", () => {
+    document.querySelectorAll(".audit-content").forEach(c => c.classList.add("hidden"));
+    document.querySelectorAll(".audit-arrow").forEach(a => a.classList.remove("rotated"));
   });
 }
 
@@ -371,19 +421,49 @@ function renderSummary(json) {
   const metrics = json.audits;
 
   const keyMetrics = [
-    { key: "first-contentful-paint", label: "First Contentful Paint", format: v => `${Math.round(v)}ms` },
-    { key: "largest-contentful-paint", label: "Largest Contentful Paint", format: v => `${Math.round(v)}ms` },
-    { key: "speed-index", label: "Speed Index", format: v => `${Math.round(v)}ms` },
-    { key: "interactive", label: "Time to Interactive", format: v => `${Math.round(v)}ms` },
-    { key: "total-blocking-time", label: "Total Blocking Time", format: v => `${Math.round(v)}ms` },
-    { key: "cumulative-layout-shift", label: "Cumulative Layout Shift", format: v => v.toFixed(3) },
+    { 
+      key: "first-contentful-paint", 
+      label: "First Contentful Paint", 
+      format: v => `${Math.round(v)}ms`, 
+      desc: "First Contentful Paint marks the time at which the first text or image is painted. " 
+    },
+    { 
+      key: "largest-contentful-paint", 
+      label: "Largest Contentful Paint", 
+      format: v => `${Math.round(v)}ms`,
+      desc: "Largest Contentful Paint marks the time at which the largest text or image is painted. "
+    },
+    { 
+      key: "speed-index", 
+      label: "Speed Index", 
+      format: v => `${Math.round(v)}ms`,
+      desc: "Speed Index shows how quickly the contents of a page are visibly populated."
+    },
+    { 
+      key: "interactive", 
+      label: "Time to Interactive", 
+      format: v => `${Math.round(v)}ms`,
+      desc: "Time to interactive is the amount of time it takes for the page to become fully interactive."
+    },
+    { 
+      key: "total-blocking-time", 
+      label: "Total Blocking Time", 
+      format: v => `${Math.round(v)}ms`,
+      desc: "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds."
+    },
+    { 
+      key: "cumulative-layout-shift", 
+      label: "Cumulative Layout Shift", 
+      format: v => v.toFixed(3),
+      desc: "Cumulative Layout Shift measures the movement of visible elements within the viewport."
+    },
   ];
 
   let html = '<div class="summary-metrics">';
   html += '<h3>Core Web Vitals</h3>';
   html += '<div class="vitals-grid">';
 
-  for (const { key, label, format } of keyMetrics) {
+  for (const { key, label, format, desc } of keyMetrics) {
     const audit = metrics[key];
     if (!audit || audit.numericValue === undefined) continue;
 
@@ -393,7 +473,10 @@ function renderSummary(json) {
 
     html += `
       <div class="summary-metric ${statusClass}">
-        <div class="summary-metric-label">${label}</div>
+        <div class="summary-metric-label">
+          ${label}
+          <span class="tooltip-icon" data-tooltip="${desc}">?</span>
+        </div>
         <div class="summary-metric-value">${value}</div>
       </div>
     `;
