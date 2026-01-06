@@ -180,7 +180,7 @@ function updateProgress(stage, percent, message) {
   }
 }
 
-function showResults(reportUrl, metrics, reportJson) {
+function showResults(reportUrl, metrics, reportJson, saveToHistory = true) {
   // Ensure progress is at 100% (defense in depth)
   updateProgress("complete", 100, "Test completed!");
   
@@ -188,14 +188,16 @@ function showResults(reportUrl, metrics, reportJson) {
   progressSection.classList.add("hidden");
 
   // Save to History
-  saveHistoryItem({
-    timestamp: new Date().toISOString(),
-    url: urlInput.value,
-    profile: profileSelect.value,
-    reportUrl,
-    metrics,
-    reportJson
-  });
+  if (saveToHistory) {
+    saveHistoryItem({
+      timestamp: new Date().toISOString(),
+      url: urlInput.value,
+      profile: profileSelect.value,
+      reportUrl,
+      metrics,
+      reportJson
+    });
+  }
   
   // Hide input form on completion (UX improvement)
   if (heroSection) heroSection.classList.add("hidden");
@@ -736,7 +738,7 @@ window.restoreHistoryItem = function(index) {
   profileSelect.value = item.profile;
   
   // Show Results (Re-use existing function)
-  showResults(item.reportUrl, item.metrics, item.reportJson);
+  showResults(item.reportUrl, item.metrics, item.reportJson, false);
 };
 
 // History Listeners
