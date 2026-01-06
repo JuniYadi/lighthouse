@@ -28,6 +28,9 @@ const openReportBtn = document.getElementById("open-report-btn");
 const viewToggleBtn = document.getElementById("view-toggle-btn");
 const errorSection = document.getElementById("error-section");
 const errorText = document.getElementById("error-text");
+const throttleInfoBtn = document.getElementById("throttle-info-btn");
+const throttleInfoModal = document.getElementById("throttle-info-modal");
+const closeThrottleInfoBtn = document.getElementById("close-throttle-info-btn");
 
 // State
 let ws = null;
@@ -54,7 +57,7 @@ async function loadServers() {
 
 function populateServerDropdown() {
   serverSelect.innerHTML = servers
-    .map((s) => `<option value="${s.url}">${s.name} (${s.url})</option>`)
+    .map((s) => `<option value="${s.url}">${s.name}</option>`)
     .join("");
 }
 
@@ -463,6 +466,27 @@ cancelServerBtn.addEventListener("click", () => {
   customServerForm.classList.add("hidden");
   customServerUrl.value = "";
 });
+
+// Throttle Info Modal Listeners
+if (throttleInfoBtn) {
+  throttleInfoBtn.addEventListener("click", () => {
+    throttleInfoModal.classList.remove("hidden");
+  });
+}
+
+if (closeThrottleInfoBtn) {
+  closeThrottleInfoBtn.addEventListener("click", () => {
+    throttleInfoModal.classList.add("hidden");
+  });
+}
+
+if (throttleInfoModal) {
+  throttleInfoModal.addEventListener("click", (e) => {
+    if (e.target === throttleInfoModal) {
+      throttleInfoModal.classList.add("hidden");
+    }
+  });
+}
 
 urlInput.addEventListener("input", checkFormValidity);
 

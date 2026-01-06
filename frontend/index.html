@@ -19,6 +19,12 @@
     </div>
     
     <div class="status-container">
+        <a href="https://github.com/JuniYadi/lighthouse" target="_blank" title="View on GitHub" style="color: var(--text-muted); display: flex; align-items: center; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+
         <div class="connection-pill" id="connection-status">
             <span class="status-dot"></span>
             <span class="status-text">Disconnected</span>
@@ -51,6 +57,22 @@
     </div>
   </div>
 
+  <!-- Throttle Info Modal -->
+  <div id="throttle-info-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>Throttling Profiles</h3>
+      <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem; margin: 1.5rem 0; text-align: left;">
+        <li><strong style="color: var(--primary);">None:</strong> No throttling. Uses your actual network connection speed.</li>
+        <li><strong style="color: var(--primary);">4G Fast:</strong> 10 Mbps down, 1.5 Mbps up, 70ms latency. Good 4G signal.</li>
+        <li><strong style="color: var(--primary);">4G Slow:</strong> 1.6 Mbps down, 0.75 Mbps up, 150ms latency. Poor 4G signal.</li>
+        <li><strong style="color: var(--primary);">3G:</strong> 750 Kbps down, 250 Kbps up, 300ms latency. Standard 3G.</li>
+      </ul>
+      <div class="modal-actions">
+        <button id="close-throttle-info-btn" class="btn-primary" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <main class="main-interface">
     
     <div class="hero-section">
@@ -62,11 +84,20 @@
 
       <div class="controls-cluster">
         <div class="setting-pill">
-          <label for="profile-select">Throttling</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+            <label for="profile-select" style="margin-bottom: 0;">Throttling</label>
+            <button id="throttle-info-btn" type="button" title="Throttle Info" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; display: flex; align-items: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </button>
+          </div>
           <select id="profile-select">
-            <option value="none">None (Baseline)</option>
+            <option value="none" selected>None (Baseline)</option>
             <option value="4g-fast">4G Fast</option>
-            <option value="4g-slow" selected>4G Slow</option>
+            <option value="4g-slow">4G Slow</option>
             <option value="3g">3G</option>
           </select>
         </div>
