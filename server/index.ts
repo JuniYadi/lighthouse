@@ -220,6 +220,28 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/servers.json") {
+      if (process.env.SERVERS) {
+        const servers = process.env.SERVERS.split(";")
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+          .map((entry: string) => {
+            const eqIdx = entry.indexOf("=");
+            if (eqIdx === -1) return null;
+            const name = entry.substring(0, eqIdx).trim();
+            let serverUrl = entry.substring(eqIdx + 1).trim();
+            if (!serverUrl.startsWith("ws://") && !serverUrl.startsWith("wss://")) {
+              serverUrl = `ws://${serverUrl}`;
+            }
+            return { name, url: serverUrl };
+          })
+          .filter((s): s is { name: string; url: string } => s !== null);
+
+        if (servers.length > 0) {
+          return new Response(JSON.stringify({ servers }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
       return new Response(Bun.file(join(FRONTEND_DIR, "servers.json")));
     }
 
