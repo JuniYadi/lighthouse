@@ -326,7 +326,8 @@ main() {
         --output=html \
         --output-path="$report_path" \
         --quiet \
-        --chrome-flags="--headless=new --no-sandbox --disable-dev-shm-usage"
+        --timeout=300000 \
+        --chrome-flags="--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer"
 
     if [ $? -eq 0 ]; then
         log_success "Lighthouse test completed"
