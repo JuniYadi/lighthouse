@@ -827,3 +827,31 @@ if (newTestBtn) {
 
 // Load History on Start
 loadHistory();
+
+// Responsive Menu Logic
+const topBar = document.getElementById('top-bar');
+const topBarMenuArea = document.getElementById('top-bar-menu-area');
+const mobileMenuPlaceholder = document.getElementById('mobile-menu-placeholder');
+
+function handleResponsiveMenu() {
+    if (!topBar || !topBarMenuArea || !mobileMenuPlaceholder) return;
+
+    if (window.innerWidth <= 768) {
+        // Mobile: Move to placeholder if not already there
+        if (!mobileMenuPlaceholder.contains(topBarMenuArea)) {
+            mobileMenuPlaceholder.appendChild(topBarMenuArea);
+        }
+    } else {
+        // Desktop: Move back to top bar if not already there
+        if (!topBar.contains(topBarMenuArea)) {
+            topBar.appendChild(topBarMenuArea);
+        }
+    }
+}
+
+// Initial check
+handleResponsiveMenu();
+
+// Listen for resize
+window.addEventListener('resize', handleResponsiveMenu);
+

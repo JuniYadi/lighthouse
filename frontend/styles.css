@@ -175,6 +175,8 @@ body {
   align-items: center;
   justify-content: flex-start;
   padding-top: 5vh;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
@@ -984,3 +986,37 @@ body {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Mobile Menu Placeholder Area */
+#mobile-menu-placeholder {
+    width: 100%;
+    margin-bottom: 2rem;
+    min-height: 0;
+}
+
+#mobile-menu-placeholder:not(:empty) {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .main-interface {
+        padding-top: 2rem;
+    }
+    
+    .hero-title {
+        font-size: 1.2rem;
+    }
+    
+    #url-input {
+        font-size: 1.5rem;
+    }
+
+    /* Ensure the moved menu allows wrapping on small screens */
+    #mobile-menu-placeholder .status-container {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+}
+
