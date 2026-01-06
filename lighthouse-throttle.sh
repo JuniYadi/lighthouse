@@ -287,10 +287,18 @@ main() {
     fi
 
     # Generate output directory name
-    local hostname=$(extract_hostname "$url")
-    local path_suffix=$(extract_path_suffix "$url")
-    local timestamp=$(date +"%Y-%m-%d_%H%M%S")
-    local run_dir="${output_dir}/${hostname}${path_suffix}_${throttling}_${timestamp}"
+    # If output_dir already contains a timestamp pattern (from server), use it directly
+    # Otherwise, create a new subdirectory with hostname/timestamp
+    if [[ "$output_dir" =~ _[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || [[ "$output_dir" =~ _[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}$ ]]; then
+        # output_dir already has timestamp, use it directly (server-provided path)
+        local run_dir="$output_dir"
+    else
+        # output_dir is a base directory, create subdirectory (standalone usage)
+        local hostname=$(extract_hostname "$url")
+        local path_suffix=$(extract_path_suffix "$url")
+        local timestamp=$(date +"%Y-%m-%d_%H%M%S")
+        local run_dir="${output_dir}/${hostname}${path_suffix}_${throttling}_${timestamp}"
+    fi
 
     # Create output directory
     mkdir -p "$run_dir"
@@ -318,7 +326,7 @@ main() {
         --output=html \
         --output-path="$report_path" \
         --quiet \
-        --chrome-flags="--headless --no-sandbox --disable-gpu"
+        --chrome-flags="--headless=new --no-sandbox --disable-dev-shm-usage"
 
     if [ $? -eq 0 ]; then
         log_success "Lighthouse test completed"
